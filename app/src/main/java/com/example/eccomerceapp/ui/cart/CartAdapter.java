@@ -1,6 +1,7 @@
 package com.example.eccomerceapp.ui.cart;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -54,6 +55,35 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
         return cartItems.size();
     }
 
+    /**
+     * Cleans a value string by removing JSON array brackets and quotes
+     */
+    private String cleanValue(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        
+        String cleaned = value.trim();
+        
+        // Remove JSON array brackets if present
+        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+            cleaned = cleaned.substring(1, cleaned.length() - 1);
+        }
+        
+        // Remove quotes if present (handle multiple quotes)
+        cleaned = cleaned.replaceAll("^\"+|\"+$", "");
+        
+        // Remove any remaining whitespace
+        cleaned = cleaned.trim();
+        
+        // If it's still empty or just brackets/quotes, return null
+        if (cleaned.isEmpty() || cleaned.equals("null") || cleaned.equals("[]")) {
+            return null;
+        }
+        
+        return cleaned;
+    }
+
     class CartViewHolder extends RecyclerView.ViewHolder {
 
         private final ItemCartBinding binding;
@@ -65,9 +95,26 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
 
         void bind(CartItem item) {
             binding.cartProductName.setText(item.getProduct().getName());
-            binding.cartProductPrice.setText(String.format(Locale.getDefault(), "$%.2f", item.getProduct().getPrice()));
-            binding.cartProductSize.setText(item.getSelectedSize() == null ? "Size: -" : "Size: " + item.getSelectedSize());
-            binding.cartProductColor.setText(item.getSelectedColor() == null ? "Color: -" : "Color: " + item.getSelectedColor());
+            binding.cartProductPrice.setText(String.format(Locale.getDefault(), "Rs %.2f", item.getProduct().getPrice()));
+            
+            // Clean size string to remove JSON brackets and quotes
+            String cleanSize = cleanValue(item.getSelectedSize());
+            if (cleanSize != null && !cleanSize.isEmpty()) {
+                binding.cartProductSize.setVisibility(View.VISIBLE);
+                binding.cartProductSize.setText("Size: " + cleanSize);
+            } else {
+                binding.cartProductSize.setVisibility(View.GONE);
+            }
+            
+            // Clean color string to remove JSON brackets and quotes
+            String cleanColor = cleanValue(item.getSelectedColor());
+            if (cleanColor != null && !cleanColor.isEmpty()) {
+                binding.cartProductColor.setVisibility(View.VISIBLE);
+                binding.cartProductColor.setText("Color: " + cleanColor);
+            } else {
+                binding.cartProductColor.setVisibility(View.GONE);
+            }
+            
             binding.quantityValue.setText(String.valueOf(item.getQuantity()));
 
             Glide.with(binding.getRoot().getContext())

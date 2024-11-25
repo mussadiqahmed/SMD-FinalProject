@@ -165,7 +165,8 @@
                             android:layout_height="wrap_content"
                             android:text="@string/see_more"
                             android:textColor="@color/accent_gray"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"
+                            android:visibility="gone" />
                     </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
@@ -195,10 +196,10 @@
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
-                        <TextView
+    <TextView
                             android:id="@+id/buttonSeeMoreProduct"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
                             android:text="@string/see_more"
                             android:textColor="@color/accent_gray"
                             android:textSize="14sp" />

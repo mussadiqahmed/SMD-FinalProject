@@ -41,11 +41,17 @@ public class OrderHistoryActivity extends AppCompatActivity {
     }
 
     private void loadOrders() {
-        List<Order> orders = orderRepository.getOrders();
-        orderAdapter.submitList(orders);
-        boolean isEmpty = orders.isEmpty();
-        binding.ordersEmptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
-        binding.ordersRecycler.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        // First sync orders from server to get latest statuses
+        orderRepository.syncOrdersFromServer(() -> {
+            // After syncing, load from local database and display
+            runOnUiThread(() -> {
+                List<Order> orders = orderRepository.getOrders();
+                orderAdapter.submitList(orders);
+                boolean isEmpty = orders.isEmpty();
+                binding.ordersEmptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+                binding.ordersRecycler.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+            });
+        });
     }
 }
 

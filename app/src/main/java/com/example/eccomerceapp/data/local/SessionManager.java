@@ -8,6 +8,7 @@ public class SessionManager {
     private static final String PREF_NAME = "ecommerce_prefs";
     private static final String KEY_IS_LOGGED_IN = "is_logged_in";
     private static final String KEY_USER_NAME = "user_name";
+    private static final String KEY_USER_EMAIL = "user_email";
     private static final String KEY_TOKEN = "auth_token";
 
     private final SharedPreferences preferences;
@@ -48,6 +49,14 @@ public class SessionManager {
 
     public void clearToken() {
         preferences.edit().remove(KEY_TOKEN).apply();
+    }
+    
+    public void saveUserEmail(String email) {
+        preferences.edit().putString(KEY_USER_EMAIL, email).apply();
+    }
+    
+    public String getUserEmail() {
+        return preferences.getString(KEY_USER_EMAIL, "");
     }
 }
 

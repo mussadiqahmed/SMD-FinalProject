@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background circle with black color (80% opacity) -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#CC000000" />
+            <size
+                android:width="40dp"
+                android:height="40dp" />
+        </shape>
+    </item>
+    <!-- Back icon centered -->
+    <item
+        android:drawable="@drawable/ic_back_white"
+        android:width="20dp"
+        android:height="20dp"
+        android:gravity="center" />
+</layer-list>
+

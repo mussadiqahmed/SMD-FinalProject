@@ -19,12 +19,13 @@ import java.util.List;
 public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "ecommerce.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_CATEGORY = "categories";
     public static final String TABLE_PRODUCT = "products";
     public static final String TABLE_CART = "cart_items";
     public static final String TABLE_ORDERS = "orders";
+    public static final String TABLE_FAVORITES = "favorites";
 
     public AppDatabaseHelper(@Nullable Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -78,16 +79,29 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
                         ")"
         );
 
+        db.execSQL(
+                "CREATE TABLE " + TABLE_FAVORITES + " (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "productId INTEGER NOT NULL UNIQUE," +
+                        "createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))" +
+                        ")"
+        );
+
         insertInitialData(db);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CART);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUCT);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CATEGORY);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDERS);
-        onCreate(db);
+        if (oldVersion < 3) {
+            // Add favorites table for version 3
+            db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS " + TABLE_FAVORITES + " (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "productId INTEGER NOT NULL UNIQUE," +
+                            "createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))" +
+                            ")"
+            );
+        }
     }
 
     private void insertInitialData(SQLiteDatabase db) {
@@ -241,18 +255,91 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
 
     public int getCartItemCount() {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT SUM(quantity) AS total FROM " + TABLE_CART, null);
+        // Count unique products (1 product = 1 count, regardless of quantity)
+        // Join with products table to ensure product exists
+        String query = "SELECT COUNT(*) AS total FROM " + TABLE_CART + " c " +
+                "INNER JOIN " + TABLE_PRODUCT + " p ON c.productId = p.id " +
+                "WHERE c.quantity > 0";
+        Cursor cursor = db.rawQuery(query, null);
         int total = 0;
         if (cursor != null) {
             if (cursor.moveToFirst()) {
-                int index = cursor.getColumnIndexOrThrow("total");
-                if (!cursor.isNull(index)) {
-                    total = cursor.getInt(index);
-                }
+                total = cursor.getInt(cursor.getColumnIndexOrThrow("total"));
             }
             cursor.close();
         }
         return total;
+    }
+
+    public void cleanupOrphanedCartEntries() {
+        SQLiteDatabase db = getWritableDatabase();
+        // Delete cart entries that reference products that don't exist
+        db.execSQL("DELETE FROM " + TABLE_CART + " WHERE productId NOT IN (SELECT id FROM " + TABLE_PRODUCT + ")");
+    }
+
+    public void cleanupOrphanedFavorites() {
+        SQLiteDatabase db = getWritableDatabase();
+        // Delete favorites that reference products that don't exist
+        db.execSQL("DELETE FROM " + TABLE_FAVORITES + " WHERE productId NOT IN (SELECT id FROM " + TABLE_PRODUCT + ")");
+    }
+
+    public void clearAllCartEntries() {
+        SQLiteDatabase db = getWritableDatabase();
+        // Clear all cart entries using execSQL for reliability
+        db.execSQL("DELETE FROM " + TABLE_CART);
+    }
+
+    public void clearAllOrders() {
+        SQLiteDatabase db = getWritableDatabase();
+        // Clear all orders using execSQL for reliability
+        db.execSQL("DELETE FROM " + TABLE_ORDERS);
+    }
+
+    // Favorites methods
+    public boolean addFavorite(long productId) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("productId", productId);
+        try {
+            db.insertOrThrow(TABLE_FAVORITES, null, values);
+            return true;
+        } catch (Exception e) {
+            // Already favorited
+            return false;
+        }
+    }
+
+    public boolean removeFavorite(long productId) {
+        SQLiteDatabase db = getWritableDatabase();
+        int rows = db.delete(TABLE_FAVORITES, "productId = ?", new String[]{String.valueOf(productId)});
+        return rows > 0;
+    }
+
+    public boolean isFavorite(long productId) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.query(TABLE_FAVORITES, new String[]{"id"}, "productId = ?", new String[]{String.valueOf(productId)}, null, null, null);
+        boolean isFav = cursor != null && cursor.getCount() > 0;
+        if (cursor != null) {
+            cursor.close();
+        }
+        return isFav;
+    }
+
+    public List<Product> getFavoriteProducts() {
+        List<Product> products = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        // Join favorites with products table
+        String query = "SELECT p.* FROM " + TABLE_PRODUCT + " p " +
+                "INNER JOIN " + TABLE_FAVORITES + " f ON p.id = f.productId " +
+                "ORDER BY f.createdAt DESC";
+        Cursor cursor = db.rawQuery(query, null);
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                products.add(parseProductCursor(cursor));
+            }
+            cursor.close();
+        }
+        return products;
     }
 
     public long insertOrder(String customerName,
@@ -295,6 +382,34 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         return orders;
     }
 
+    public void updateOrInsertOrder(long serverId, String customerName, String phone, String addressLine, String city, double total, String status, long createdAt) {
+        SQLiteDatabase db = getWritableDatabase();
+        // Check if order exists by server ID
+        Cursor cursor = db.query(TABLE_ORDERS, new String[]{"id"}, "id = ?", new String[]{String.valueOf(serverId)}, null, null, null);
+        boolean exists = cursor != null && cursor.getCount() > 0;
+        if (cursor != null) {
+            cursor.close();
+        }
+
+        ContentValues values = new ContentValues();
+        values.put("id", serverId);
+        values.put("customerName", customerName);
+        values.put("phone", phone);
+        values.put("addressLine", addressLine);
+        values.put("city", city);
+        values.put("total", total);
+        values.put("status", status);
+        values.put("createdAt", createdAt);
+
+        if (exists) {
+            // Update existing order (mainly to update status)
+            db.update(TABLE_ORDERS, values, "id = ?", new String[]{String.valueOf(serverId)});
+        } else {
+            // Insert new order
+            db.insert(TABLE_ORDERS, null, values);
+        }
+    }
+
     public List<CartItem> getCartItems() {
         List<CartItem> items = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
@@ -315,6 +430,40 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         }
         return items;
     }
+
+    public List<CartRawData> getCartRawData() {
+        List<CartRawData> items = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.query(TABLE_CART, null, null, null, null, null, "id DESC");
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow("id"));
+                long productId = cursor.getLong(cursor.getColumnIndexOrThrow("productId"));
+                int quantity = cursor.getInt(cursor.getColumnIndexOrThrow("quantity"));
+                String size = cursor.getString(cursor.getColumnIndexOrThrow("size"));
+                String color = cursor.getString(cursor.getColumnIndexOrThrow("color"));
+                items.add(new CartRawData(id, productId, quantity, size, color));
+            }
+            cursor.close();
+        }
+        return items;
+    }
+
+    public static class CartRawData {
+        public final long cartId;
+        public final long productId;
+        public final int quantity;
+        public final String size;
+        public final String color;
+
+        public CartRawData(long cartId, long productId, int quantity, String size, String color) {
+            this.cartId = cartId;
+            this.productId = productId;
+            this.quantity = quantity;
+            this.size = size;
+            this.color = color;
+        }
+    }
     private Product parseProductCursor(Cursor cursor) {
         long id = cursor.getLong(cursor.getColumnIndexOrThrow("id"));
         String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
@@ -324,7 +473,19 @@ public class AppDatabaseHelper extends SQLiteOpenHelper {
         long categoryId = cursor.getLong(cursor.getColumnIndexOrThrow("categoryId"));
         String sizes = cursor.getString(cursor.getColumnIndexOrThrow("sizes"));
         String colors = cursor.getString(cursor.getColumnIndexOrThrow("colors"));
-        return new Product(id, name, description, price, imageUrl, categoryId, sizes, colors);
+        
+        // Get discountPercent if column exists, otherwise default to 0
+        double discountPercent = 0.0;
+        try {
+            int discountIndex = cursor.getColumnIndex("discountPercent");
+            if (discountIndex >= 0 && !cursor.isNull(discountIndex)) {
+                discountPercent = cursor.getDouble(discountIndex);
+            }
+        } catch (Exception e) {
+            // Column doesn't exist, use default 0
+        }
+        
+        return new Product(id, name, description, price, discountPercent, imageUrl, categoryId, sizes, colors);
     }
 }
 

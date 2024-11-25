@@ -8,6 +8,7 @@ public class Product {
     private final String name;
     private final String description;
     private final double price;
+    private final double discountPercent;
     private final String imageUrl;
     private final long categoryId;
     private final List<String> sizes;
@@ -17,6 +18,7 @@ public class Product {
                    String name,
                    String description,
                    double price,
+                   double discountPercent,
                    String imageUrl,
                    long categoryId,
                    String sizesCsv,
@@ -25,6 +27,7 @@ public class Product {
         this.name = name;
         this.description = description;
         this.price = price;
+        this.discountPercent = discountPercent;
         this.imageUrl = imageUrl;
         this.categoryId = categoryId;
         this.sizes = parseCsv(sizesCsv);
@@ -35,10 +38,29 @@ public class Product {
         if (csv == null || csv.trim().isEmpty()) {
             return new ArrayList<>();
         }
-        String[] parts = csv.split(",");
+        
+        // Handle JSON array format like ["S","M","L"]
+        String cleaned = csv.trim();
+        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+            try {
+                // Remove brackets and split by comma
+                cleaned = cleaned.substring(1, cleaned.length() - 1);
+            } catch (Exception e) {
+                // Fall through to normal parsing
+            }
+        }
+        
+        String[] parts = cleaned.split(",");
         List<String> values = new ArrayList<>();
         for (String part : parts) {
-            values.add(part.trim());
+            String trimmed = part.trim();
+            // Remove quotes if present
+            if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+                trimmed = trimmed.substring(1, trimmed.length() - 1);
+            }
+            if (!trimmed.isEmpty()) {
+                values.add(trimmed);
+            }
         }
         return values;
     }
@@ -57,6 +79,21 @@ public class Product {
 
     public double getPrice() {
         return price;
+    }
+
+    public double getDiscountPercent() {
+        return discountPercent;
+    }
+
+    public double getDiscountedPrice() {
+        if (discountPercent > 0) {
+            return price - (price * discountPercent / 100.0);
+        }
+        return price;
+    }
+
+    public boolean hasDiscount() {
+        return discountPercent > 0;
     }
 
     public String getImageUrl() {

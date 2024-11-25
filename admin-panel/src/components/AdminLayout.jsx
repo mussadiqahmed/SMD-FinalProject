@@ -5,7 +5,8 @@ import './AdminLayout.css';
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/products', label: 'Products' },
-  { to: '/users', label: 'Users' }
+  { to: '/users', label: 'Users' },
+  { to: '/orders', label: 'Orders' }
 ];
 
 export default function AdminLayout() {
@@ -14,7 +15,10 @@ export default function AdminLayout() {
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-logo">Nova Admin</div>
+        <div className="admin-logo">
+          <img src="/logo.svg" alt="Nova Logo" className="logo-icon" />
+          <span>Nova Admin</span>
+        </div>
         <nav>
           {navLinks.map((link) => (
             <NavLink key={link.to} to={link.to}>

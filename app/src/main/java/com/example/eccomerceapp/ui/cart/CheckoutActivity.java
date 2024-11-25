@@ -7,6 +7,9 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.eccomerceapp.data.api.ApiClient;
+import com.example.eccomerceapp.data.api.ApiService;
+import com.example.eccomerceapp.data.api.model.OrderRequest;
 import com.example.eccomerceapp.data.repository.CartRepository;
 import com.example.eccomerceapp.data.repository.OrderRepository;
 import com.example.eccomerceapp.databinding.ActivityCheckoutBinding;
@@ -17,6 +20,10 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.List;
 import java.util.Locale;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class CheckoutActivity extends AppCompatActivity {
 
     public static final String EXTRA_ORDER_TOTAL = "extra_order_total";
@@ -24,6 +31,7 @@ public class CheckoutActivity extends AppCompatActivity {
     private ActivityCheckoutBinding binding;
     private OrderRepository orderRepository;
     private CartRepository cartRepository;
+    private ApiService apiService;
     private double orderTotal;
 
     @Override
@@ -37,12 +45,13 @@ public class CheckoutActivity extends AppCompatActivity {
 
         cartRepository = new CartRepository(this);
         orderRepository = new OrderRepository(this);
+        apiService = ApiClient.getInstance();
 
         orderTotal = getIntent().getDoubleExtra(EXTRA_ORDER_TOTAL, 0d);
         if (orderTotal == 0d) {
             orderTotal = calculateCartTotal();
         }
-        binding.checkoutTotal.setText(String.format(Locale.getDefault(), "$%.2f", orderTotal));
+        binding.checkoutTotal.setText(String.format(Locale.getDefault(), "Rs %.2f", orderTotal));
 
         binding.buttonPlaceOrder.setOnClickListener(v -> placeOrder());
     }
@@ -73,17 +82,56 @@ public class CheckoutActivity extends AppCompatActivity {
             return;
         }
 
-        long orderId = orderRepository.placeOrder(name, phone, address, city, orderTotal);
-        if (orderId > 0) {
-            cartRepository.clearCart();
-            Toast.makeText(this, "Order placed!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, OrderHistoryActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(intent);
-            finish();
-        } else {
-            Toast.makeText(this, "Unable to place order. Try again.", Toast.LENGTH_SHORT).show();
-        }
+        // Create order request
+        OrderRequest orderRequest = new OrderRequest();
+        orderRequest.customerName = name;
+        orderRequest.phone = phone;
+        orderRequest.addressLine = address;
+        orderRequest.city = city;
+        orderRequest.total = orderTotal;
+
+        // Save locally first
+        long localOrderId = orderRepository.placeOrder(name, phone, address, city, orderTotal);
+        
+        // Also send to server
+        apiService.createOrder(orderRequest).enqueue(new Callback<com.example.eccomerceapp.data.api.model.ApiOrder>() {
+            @Override
+            public void onResponse(Call<com.example.eccomerceapp.data.api.model.ApiOrder> call, Response<com.example.eccomerceapp.data.api.model.ApiOrder> response) {
+                if (response.isSuccessful() && localOrderId > 0) {
+                    cartRepository.clearCart();
+                    Toast.makeText(CheckoutActivity.this, "Order placed!", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(CheckoutActivity.this, OrderHistoryActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    finish();
+                } else if (localOrderId > 0) {
+                    // Order saved locally even if server call failed
+                    cartRepository.clearCart();
+                    Toast.makeText(CheckoutActivity.this, "Order placed! (Saved locally)", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(CheckoutActivity.this, OrderHistoryActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    Toast.makeText(CheckoutActivity.this, "Unable to place order. Try again.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<com.example.eccomerceapp.data.api.model.ApiOrder> call, Throwable t) {
+                // If server call fails but local save succeeded, still proceed
+                if (localOrderId > 0) {
+                    cartRepository.clearCart();
+                    Toast.makeText(CheckoutActivity.this, "Order placed! (Saved locally)", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(CheckoutActivity.this, OrderHistoryActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    Toast.makeText(CheckoutActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private String getText(TextInputEditText editText) {

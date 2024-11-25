@@ -1,0 +1,44 @@
+.orders-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.orders-table {
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+  overflow-x: auto;
+}
+
+.orders-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.orders-table th {
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #9a9aae;
+  padding-bottom: 14px;
+}
+
+.orders-table td {
+  padding: 16px 0;
+  border-top: 1px solid #f0f0f6;
+}
+
+.orders-table select {
+  font-size: 13px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: #9a9aae;
+}
+

@@ -257,11 +257,26 @@ router.put('/:id', authenticate, upload.array('imageFiles', 3), (req, res) => {
 });
 
 router.delete('/:id', authenticate, (req, res) => {
+  const productId = req.params.id;
+  
+  // Check if product exists
+  const product = db.prepare('SELECT id FROM products WHERE id = ?').get(productId);
+  if (!product) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  // Note: Cart items and favorites are stored in Android app's local database,
+  // so they will be cleaned up by the app's cleanupOrphanedCartEntries() method.
+  // The server doesn't maintain these relationships.
+
+  // Delete the product
   const stmt = db.prepare('DELETE FROM products WHERE id = ?');
-  const result = stmt.run(req.params.id);
+  const result = stmt.run(productId);
+  
   if (result.changes === 0) {
     return res.status(404).json({ message: 'Product not found' });
   }
+  
   res.status(204).send();
 });
 

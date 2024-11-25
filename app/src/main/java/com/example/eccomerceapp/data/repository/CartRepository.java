@@ -38,5 +38,21 @@ public class CartRepository {
     public int getCartCount() {
         return dbHelper.getCartItemCount();
     }
+
+    public AppDatabaseHelper getDbHelper() {
+        return dbHelper;
+    }
+
+    public List<AppDatabaseHelper.CartRawData> getCartRawData() {
+        return dbHelper.getCartRawData();
+    }
+
+    public void cleanupOrphanedEntries() {
+        dbHelper.cleanupOrphanedCartEntries();
+    }
+
+    public void clearAllCartEntries() {
+        dbHelper.clearAllCartEntries();
+    }
 }
 
