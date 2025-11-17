@@ -1,0 +1,23 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/drawer_home"
+            android:title="@string/menu_home" />
+        <item
+            android:id="@+id/drawer_orders"
+            android:title="@string/menu_orders" />
+        <item
+            android:id="@+id/drawer_category"
+            android:title="@string/menu_category" />
+        <item
+            android:id="@+id/drawer_likes"
+            android:title="@string/menu_likes" />
+        <item
+            android:id="@+id/drawer_settings"
+            android:title="@string/menu_settings" />
+    </group>
+    <item
+        android:id="@+id/drawer_logout"
+        android:title="@string/menu_logout" />
+</menu>
+

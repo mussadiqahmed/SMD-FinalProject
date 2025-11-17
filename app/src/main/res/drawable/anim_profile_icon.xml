@@ -1,0 +1,7 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_profile_person">
+    <target
+        android:name="headGroup"
+        android:animation="@animator/head_bob" />
+</animated-vector>
+
