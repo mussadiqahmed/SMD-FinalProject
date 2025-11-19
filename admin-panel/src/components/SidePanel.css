@@ -1,0 +1,62 @@
+.sidepanel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 13, 24, 0.55);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 999;
+}
+
+.sidepanel {
+  background: #fff;
+  height: 100%;
+  max-width: 90vw;
+  box-shadow: -8px 0 30px rgba(15, 23, 42, 0.12);
+  padding: 28px;
+  animation: slideIn 180ms ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidepanel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sidepanel__header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1b1b1d;
+}
+
+.sidepanel__header button {
+  border: none;
+  background: #f2f3fb;
+  color: #1b1b1d;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.sidepanel__body {
+  overflow-y: auto;
+  padding-right: 8px;
+  flex: 1;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+

@@ -2,30 +2,31 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout';
 import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
-import CategoriesPage from './pages/CategoriesPage';
 import UsersPage from './pages/UsersPage';
 import './App.css';
 
-function App() {
+function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/products" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
+        path="/"
         element={(
           <ProtectedRoute>
             <AdminLayout />
           </ProtectedRoute>
         )}
       >
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/users" element={<UsersPage />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="users" element={<UsersPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/products" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
 
-export default App;
+export default AppRoutes;
