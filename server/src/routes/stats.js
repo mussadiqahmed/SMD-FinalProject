@@ -55,17 +55,3 @@ router.get('/', (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const db = require('../db/connection');
-
-const router = express.Router();
-
-router.get('/', (req, res) => {
-  const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get().count || 0;
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count || 0;
-  const orderCount = db.prepare('SELECT COUNT(*) as count FROM orders').get().count || 0;
-
-  const recentProducts = db
-    .prepare(`SELECT id, name, price, createdAt FROM products ORDER BY datetime(createdAt) DESC LIMIT 5`)
-    (???)
-

@@ -12,6 +12,8 @@
 server/node_modules/
 admin-panel/node_modules/
 server/data/
+uploads/
+!uploads/.gitkeep
 
 # Env
 server/.env

@@ -41,8 +41,10 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
           : [product.imageUrl || '', '', '']
         ).slice(0, 3)
       });
+      setImageFiles([null, null, null]);
     } else {
       setForm(emptyProduct);
+      setImageFiles([null, null, null]);
     }
   }, [product, resolvedCategories]);
 
@@ -68,10 +70,26 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
     });
   };
 
+  const [imageFiles, setImageFiles] = useState([null, null, null]);
+
   const handleImageChange = (index, value) => {
     setForm((prev) => {
       const next = [...prev.images];
       next[index] = value;
+      return { ...prev, images: next };
+    });
+  };
+
+  const handleFileChange = (index, file) => {
+    setImageFiles((prev) => {
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
+    // Clear URL when file is selected
+    setForm((prev) => {
+      const next = [...prev.images];
+      next[index] = '';
       return { ...prev, images: next };
     });
   };
@@ -81,31 +99,47 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
     setSaving(true);
     setError('');
 
-    const payload = {
-      name: form.name.trim(),
-      description: form.description,
-      categoryId: Number(form.categoryId),
-      price: Number(form.price),
-      discountPercent: form.discountPercent ? Number(form.discountPercent) : 0,
-      stock: form.stock ? Number(form.stock) : 0,
-      sizes: form.sizes,
-      colors: form.colors,
-      featured: form.featured,
-      images: form.images.filter((img) => img && img.trim())
-    };
+    const formData = new FormData();
+    formData.append('name', form.name.trim());
+    formData.append('description', form.description || '');
+    formData.append('categoryId', Number(form.categoryId));
+    formData.append('price', Number(form.price));
+    formData.append('discountPercent', form.discountPercent ? Number(form.discountPercent) : 0);
+    formData.append('stock', form.stock ? Number(form.stock) : 0);
+    formData.append('sizes', JSON.stringify(form.sizes));
+    formData.append('colors', JSON.stringify(form.colors));
+    formData.append('featured', form.featured ? '1' : '0');
 
-    if (!payload.images.length) {
-      setError('Please provide at least one product image URL.');
+    // Add image URLs (non-empty ones)
+    const urlImages = form.images.filter((img) => img && img.trim());
+    if (urlImages.length) {
+      formData.append('images', JSON.stringify(urlImages));
+    }
+
+    // Add file uploads
+    imageFiles.forEach((file, index) => {
+      if (file) {
+        formData.append('images', file);
+      }
+    });
+
+    const hasImages = urlImages.length > 0 || imageFiles.some((f) => f !== null);
+    if (!hasImages) {
+      setError('Please provide at least one product image (upload file or enter URL).');
       setSaving(false);
       return;
     }
 
     try {
+      const config = {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      };
       if (product?.id) {
-        await api.put(`/products/${product.id}`, payload);
+        await api.put(`/products/${product.id}`, formData, config);
       } else {
-        await api.post('/products', payload);
+        await api.post('/products', formData, config);
       }
+      setImageFiles([null, null, null]);
       onSaved();
       onClose();
     } catch (err) {
@@ -199,16 +233,31 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
         </div>
 
         <div className="image-grid">
-          <p>Images (up to 3)</p>
+          <p>Images (up to 3) <span className="required">*</span></p>
           {form.images.map((image, index) => (
-            <label key={index}>
-              Image {index + 1} {index === 0 && <span className="required">*</span>}
-              <input
-                value={image}
-                onChange={(event) => handleImageChange(index, event.target.value)}
-                required={index === 0}
-              />
-            </label>
+            <div key={index} className="image-input-group">
+              <label>
+                Upload Image {index + 1} {index === 0 && <span className="required">*</span>}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleFileChange(index, event.target.files[0] || null)}
+                />
+                {imageFiles[index] && (
+                  <span className="file-name">{imageFiles[index].name}</span>
+                )}
+              </label>
+              <span className="or-divider">OR</span>
+              <label>
+                Image URL {index + 1}
+                <input
+                  type="url"
+                  value={image}
+                  onChange={(event) => handleImageChange(index, event.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </label>
+            </div>
           ))}
         </div>
 

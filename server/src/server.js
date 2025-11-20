@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
 const config = require('./config');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
@@ -16,7 +17,11 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(morgan('dev'));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '..', '..', 'uploads')));
 
 app.get('/', (req, res) => {
   res.json({

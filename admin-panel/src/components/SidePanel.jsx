@@ -4,8 +4,8 @@ export default function SidePanel({ open, title, onClose, children, width = 520 
   if (!open) return null;
 
   return (
-    <div className="sidepanel-overlay" role="presentation">
-      <div className="sidepanel" style={{ width }}>
+    <div className="sidepanel-overlay" role="presentation" onClick={onClose}>
+      <div className="sidepanel" style={{ width }} onClick={(e) => e.stopPropagation()}>
         <header className="sidepanel__header">
           <h3>{title}</h3>
           <button type="button" aria-label="Close" onClick={onClose}>
@@ -17,17 +17,3 @@ export default function SidePanel({ open, title, onClose, children, width = 520 
     </div>
   );
 }
-import './SidePanel.css';
-
-export default function SidePanel({ open, title, onClose, children, width = 520 }) {
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div className="sidepanel-overlay" role="presentation">
-      <div className="sidepanel" style={{ width }}>
-        <div className="sidepanel__header">
-          <h3>{title}</h3>
-          <button type se?? 
-

@@ -1,6 +1,8 @@
 const express = require('express');
 const db = require('../db/connection');
 const authenticate = require('../middleware/auth');
+const upload = require('../middleware/upload');
+const config = require('../config');
 const { toStoredList, fromStoredList } = require('../utils/serializers');
 
 const router = express.Router();
@@ -104,110 +106,132 @@ router.get('/:id', (req, res) => {
   res.json(mapProduct(product));
 });
 
-router.post('/', authenticate, (req, res) => {
-  const {
-    name,
-    description,
-    price,
-    categoryId,
-    sizes,
-    colors,
-    featured,
-    discountPercent,
-    stock,
-    images = []
-  } = req.body;
+router.post('/', authenticate, upload.array('images', 3), (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      categoryId,
+      sizes,
+      colors,
+      featured,
+      discountPercent,
+      stock,
+      images: imageUrls = []
+    } = req.body;
 
-  if (!name || price === undefined || !categoryId) {
-    return res.status(400).json({ message: 'Name, price, and category are required' });
+    if (!name || price === undefined || !categoryId) {
+      return res.status(400).json({ message: 'Name, price, and category are required' });
+    }
+
+    // Combine uploaded files with URL inputs
+    const uploadedUrls = (req.files || []).map(
+      (file) => `${config.baseUrl}/uploads/products/${file.filename}`
+    );
+    const urlList = buildList(imageUrls);
+    const normalizedImages = [...uploadedUrls, ...urlList].slice(0, 3);
+
+    if (!normalizedImages.length) {
+      return res.status(400).json({ message: 'At least one product image is required' });
+    }
+
+    const stmt = db.prepare(`INSERT INTO products
+      (name, description, price, discountPercent, imageUrl, images, categoryId, sizes, colors, stock, featured)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    const result = stmt.run(
+      name,
+      description || '',
+      Number(price),
+      Number(discountPercent) || 0,
+      normalizedImages[0],
+      JSON.stringify(normalizedImages),
+      Number(categoryId),
+      toStoredList(buildList(sizes)),
+      toStoredList(buildList(colors)),
+      Number.isFinite(Number(stock)) ? Number(stock) : 0,
+      featured ? 1 : 0
+    );
+
+    const product = db
+      .prepare(
+        `SELECT p.*, c.title as categoryTitle, c.slug as categorySlug
+         FROM products p
+         LEFT JOIN categories c ON c.id = p.categoryId
+         WHERE p.id = ?`
+      )
+      .get(result.lastInsertRowid);
+    res.status(201).json(mapProduct(product));
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ message: error.message || 'Failed to create product' });
   }
-
-  const normalizedImages = buildList(images).slice(0, 3);
-  if (!normalizedImages.length) {
-    return res.status(400).json({ message: 'At least one product image is required' });
-  }
-
-  const stmt = db.prepare(`INSERT INTO products
-    (name, description, price, discountPercent, imageUrl, images, categoryId, sizes, colors, stock, featured)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  );
-
-  const result = stmt.run(
-    name,
-    description || '',
-    Number(price),
-    Number(discountPercent) || 0,
-    normalizedImages[0],
-    JSON.stringify(normalizedImages),
-    Number(categoryId),
-    toStoredList(buildList(sizes)),
-    toStoredList(buildList(colors)),
-    Number.isFinite(Number(stock)) ? Number(stock) : 0,
-    featured ? 1 : 0
-  );
-
-  const product = db
-    .prepare(
-      `SELECT p.*, c.title as categoryTitle, c.slug as categorySlug
-       FROM products p
-       LEFT JOIN categories c ON c.id = p.categoryId
-       WHERE p.id = ?`
-    )
-    .get(result.lastInsertRowid);
-  res.status(201).json(mapProduct(product));
 });
 
-router.put('/:id', authenticate, (req, res) => {
-  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
-  if (!existing) {
-    return res.status(404).json({ message: 'Product not found' });
+router.put('/:id', authenticate, upload.array('images', 3), (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    const {
+      name = existing.name,
+      description = existing.description,
+      price = existing.price,
+      categoryId = existing.categoryId,
+      sizes,
+      colors,
+      featured = existing.featured,
+      discountPercent = existing.discountPercent,
+      stock = existing.stock,
+      images: imageUrls = parseImages(existing.images)
+    } = req.body;
+
+    // Combine uploaded files with URL inputs
+    const uploadedUrls = (req.files || []).map(
+      (file) => `${config.baseUrl}/uploads/products/${file.filename}`
+    );
+    const urlList = buildList(imageUrls);
+    const normalizedImages = [...uploadedUrls, ...urlList].slice(0, 3);
+    
+    if (!normalizedImages.length) {
+      normalizedImages.push(existing.imageUrl || '');
+    }
+
+    const stmt = db.prepare(`UPDATE products SET
+      name = ?, description = ?, price = ?, discountPercent = ?, imageUrl = ?, images = ?, categoryId = ?, sizes = ?, colors = ?, stock = ?, featured = ?
+      WHERE id = ?`);
+
+    stmt.run(
+      name,
+      description,
+      Number(price),
+      Number(discountPercent) || 0,
+      normalizedImages[0],
+      JSON.stringify(normalizedImages),
+      Number(categoryId),
+      sizes ? toStoredList(buildList(sizes)) : existing.sizes,
+      colors ? toStoredList(buildList(colors)) : existing.colors,
+      Number.isFinite(Number(stock)) ? Number(stock) : existing.stock,
+      featured ? 1 : 0,
+      req.params.id
+    );
+
+    const product = db
+      .prepare(
+        `SELECT p.*, c.title as categoryTitle, c.slug as categorySlug
+         FROM products p
+         LEFT JOIN categories c ON c.id = p.categoryId
+         WHERE p.id = ?`
+      )
+      .get(req.params.id);
+    res.json(mapProduct(product));
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ message: error.message || 'Failed to update product' });
   }
-  const {
-    name = existing.name,
-    description = existing.description,
-    price = existing.price,
-    categoryId = existing.categoryId,
-    sizes,
-    colors,
-    featured = existing.featured,
-    discountPercent = existing.discountPercent,
-    stock = existing.stock,
-    images = parseImages(existing.images)
-  } = req.body;
-
-  const normalizedImages = buildList(images).slice(0, 3);
-  if (!normalizedImages.length) {
-    normalizedImages.push(existing.imageUrl || '');
-  }
-
-  const stmt = db.prepare(`UPDATE products SET
-    name = ?, description = ?, price = ?, discountPercent = ?, imageUrl = ?, images = ?, categoryId = ?, sizes = ?, colors = ?, stock = ?, featured = ?
-    WHERE id = ?`);
-
-  stmt.run(
-    name,
-    description,
-    Number(price),
-    Number(discountPercent) || 0,
-    normalizedImages[0],
-    JSON.stringify(normalizedImages),
-    Number(categoryId),
-    sizes ? toStoredList(buildList(sizes)) : existing.sizes,
-    colors ? toStoredList(buildList(colors)) : existing.colors,
-    Number.isFinite(Number(stock)) ? Number(stock) : existing.stock,
-    featured ? 1 : 0,
-    req.params.id
-  );
-
-  const product = db
-    .prepare(
-      `SELECT p.*, c.title as categoryTitle, c.slug as categorySlug
-       FROM products p
-       LEFT JOIN categories c ON c.id = p.categoryId
-       WHERE p.id = ?`
-    )
-    .get(req.params.id);
-  res.json(mapProduct(product));
 });
 
 router.delete('/:id', authenticate, (req, res) => {
