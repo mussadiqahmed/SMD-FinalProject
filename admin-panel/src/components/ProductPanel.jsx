@@ -110,16 +110,16 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
     formData.append('colors', JSON.stringify(form.colors));
     formData.append('featured', form.featured ? '1' : '0');
 
-    // Add image URLs (non-empty ones)
+    // Add image URLs (non-empty ones) - use separate field name
     const urlImages = form.images.filter((img) => img && img.trim());
     if (urlImages.length) {
-      formData.append('images', JSON.stringify(urlImages));
+      formData.append('imageUrls', JSON.stringify(urlImages));
     }
 
-    // Add file uploads
-    imageFiles.forEach((file, index) => {
+    // Add file uploads - use separate field name
+    imageFiles.forEach((file) => {
       if (file) {
-        formData.append('images', file);
+        formData.append('imageFiles', file);
       }
     });
 

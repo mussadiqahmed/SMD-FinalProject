@@ -106,8 +106,20 @@ router.get('/:id', (req, res) => {
   res.json(mapProduct(product));
 });
 
-router.post('/', authenticate, upload.array('images', 3), (req, res) => {
+router.post('/', authenticate, upload.array('imageFiles', 3), (req, res) => {
   try {
+    let imageUrls = [];
+    try {
+      if (req.body.imageUrls) {
+        imageUrls = typeof req.body.imageUrls === 'string' 
+          ? JSON.parse(req.body.imageUrls) 
+          : req.body.imageUrls;
+      }
+    } catch (e) {
+      // If parsing fails, treat as empty array
+      imageUrls = [];
+    }
+
     const {
       name,
       description,
@@ -117,8 +129,7 @@ router.post('/', authenticate, upload.array('images', 3), (req, res) => {
       colors,
       featured,
       discountPercent,
-      stock,
-      images: imageUrls = []
+      stock
     } = req.body;
 
     if (!name || price === undefined || !categoryId) {
@@ -170,12 +181,24 @@ router.post('/', authenticate, upload.array('images', 3), (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, upload.array('images', 3), (req, res) => {
+router.put('/:id', authenticate, upload.array('imageFiles', 3), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
     if (!existing) {
       return res.status(404).json({ message: 'Product not found' });
     }
+
+    let imageUrls = parseImages(existing.images);
+    try {
+      if (req.body.imageUrls) {
+        imageUrls = typeof req.body.imageUrls === 'string' 
+          ? JSON.parse(req.body.imageUrls) 
+          : req.body.imageUrls;
+      }
+    } catch (e) {
+      // Keep existing images if parsing fails
+    }
+
     const {
       name = existing.name,
       description = existing.description,
@@ -185,8 +208,7 @@ router.put('/:id', authenticate, upload.array('images', 3), (req, res) => {
       colors,
       featured = existing.featured,
       discountPercent = existing.discountPercent,
-      stock = existing.stock,
-      images: imageUrls = parseImages(existing.images)
+      stock = existing.stock
     } = req.body;
 
     // Combine uploaded files with URL inputs
