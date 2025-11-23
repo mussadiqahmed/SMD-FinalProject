@@ -126,7 +126,7 @@ export default function ProductsPage() {
                     </div>
                   </td>
                   <td>{product.category?.title || '—'}</td>
-                  <td>${Number(product.price).toFixed(2)}</td>
+                  <td>Rs {Number(product.price).toFixed(2)}</td>
                   <td>{product.discountPercent ? `${product.discountPercent}%` : '—'}</td>
                   <td>{product.stock ?? 0}</td>
                   <td>

@@ -21,6 +21,7 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
   const [form, setForm] = useState(emptyProduct);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const resolvedCategories = categories.length ? categories : CATEGORY_OPTIONS;
 
@@ -94,10 +95,50 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
     });
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!form.name || !form.name.trim()) {
+      errors.name = 'Product name is required';
+    }
+    
+    if (!form.price || form.price === '' || Number(form.price) <= 0) {
+      errors.price = 'Price must be greater than 0';
+    }
+    
+    if (!form.categoryId) {
+      errors.categoryId = 'Category is required';
+    }
+    
+    const urlImages = form.images.filter((img) => img && img.trim());
+    const hasImages = urlImages.length > 0 || imageFiles.some((f) => f !== null);
+    if (!hasImages) {
+      errors.images = 'At least one product image is required (upload file or enter URL)';
+    }
+    
+    if (form.discountPercent && (Number(form.discountPercent) < 0 || Number(form.discountPercent) > 95)) {
+      errors.discountPercent = 'Discount must be between 0 and 95%';
+    }
+    
+    if (form.stock && Number(form.stock) < 0) {
+      errors.stock = 'Stock cannot be negative';
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
     setError('');
+    setFieldErrors({});
+
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setSaving(false);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('name', form.name.trim());
@@ -123,13 +164,6 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
       }
     });
 
-    const hasImages = urlImages.length > 0 || imageFiles.some((f) => f !== null);
-    if (!hasImages) {
-      setError('Please provide at least one product image (upload file or enter URL).');
-      setSaving(false);
-      return;
-    }
-
     try {
       const config = {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -140,10 +174,17 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
         await api.post('/products', formData, config);
       }
       setImageFiles([null, null, null]);
+      setFieldErrors({});
       onSaved();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to save product');
+      const errorMessage = err.response?.data?.message || 'Unable to save product';
+      setError(errorMessage);
+      
+      // Try to parse field-specific errors from response
+      if (err.response?.data?.errors) {
+        setFieldErrors(err.response.data.errors);
+      }
     } finally {
       setSaving(false);
     }
@@ -159,7 +200,13 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
         {error && <div className="panel-error">{error}</div>}
         <label>
           Product name
-          <input name="name" value={form.name} onChange={handleFieldChange} required />
+          <input 
+            name="name" 
+            value={form.name} 
+            onChange={handleFieldChange} 
+            className={fieldErrors.name ? 'error' : ''}
+          />
+          {fieldErrors.name && <span className="field-error">{fieldErrors.name}</span>}
         </label>
         <label>
           Description
@@ -173,14 +220,20 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
         <div className="form-row">
           <label>
             Category
-            <select name="categoryId" value={form.categoryId} onChange={handleFieldChange}>
+            <select 
+              name="categoryId" 
+              value={form.categoryId} 
+              onChange={handleFieldChange}
+              className={fieldErrors.categoryId ? 'error' : ''}
+            >
               {resolvedCategories.map((category) => (
                 <option key={category.id} value={category.id}>{category.title}</option>
               ))}
             </select>
+            {fieldErrors.categoryId && <span className="field-error">{fieldErrors.categoryId}</span>}
           </label>
           <label>
-            Price ($)
+            Price (Rs)
             <input
               name="price"
               type="number"
@@ -188,8 +241,9 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
               min="0"
               value={form.price}
               onChange={handleFieldChange}
-              required
+              className={fieldErrors.price ? 'error' : ''}
             />
+            {fieldErrors.price && <span className="field-error">{fieldErrors.price}</span>}
           </label>
         </div>
         <div className="form-row">
@@ -202,7 +256,9 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
               max="95"
               value={form.discountPercent}
               onChange={handleFieldChange}
+              className={fieldErrors.discountPercent ? 'error' : ''}
             />
+            {fieldErrors.discountPercent && <span className="field-error">{fieldErrors.discountPercent}</span>}
           </label>
           <label>
             Stock
@@ -212,7 +268,9 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
               min="0"
               value={form.stock}
               onChange={handleFieldChange}
+              className={fieldErrors.stock ? 'error' : ''}
             />
+            {fieldErrors.stock && <span className="field-error">{fieldErrors.stock}</span>}
           </label>
         </div>
 
@@ -259,6 +317,7 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
               </label>
             </div>
           ))}
+          {fieldErrors.images && <span className="field-error">{fieldErrors.images}</span>}
         </div>
 
         <label className="checkbox-field">
