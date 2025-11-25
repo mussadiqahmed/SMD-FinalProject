@@ -219,7 +219,23 @@ public class HomeActivity extends AppCompatActivity implements
     @Override
     public void onCategorySelected(Category category) {
         selectedCategoryId = category.getId();
-        loadProducts(selectedCategoryId);
+        // Find category slug from API response for filtering
+        apiService.getProducts(category.getId(), null, null, null).enqueue(
+                new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
+                    @Override
+                    public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
+                                           Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            List<Product> products = ApiMapper.toProductList(response.body());
+                            productAdapter.submitList(products);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
+                        Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     @Override
