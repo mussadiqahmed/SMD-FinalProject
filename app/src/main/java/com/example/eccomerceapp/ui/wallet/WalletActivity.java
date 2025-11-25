@@ -48,9 +48,9 @@ public class WalletActivity extends AppCompatActivity {
         int orderCount = orders.size();
         double average = orderCount == 0 ? 0 : totalSpent / orderCount;
 
-        binding.walletTotalSpent.setText(String.format(Locale.getDefault(), "$%.2f", totalSpent));
+        binding.walletTotalSpent.setText(String.format(Locale.getDefault(), "Rs %.2f", totalSpent));
         binding.walletOrdersCount.setText(String.valueOf(orderCount));
-        binding.walletAverage.setText(String.format(Locale.getDefault(), "$%.2f", average));
+        binding.walletAverage.setText(String.format(Locale.getDefault(), "Rs %.2f", average));
 
         if (orderCount > 0) {
             Order latest = orders.get(0);

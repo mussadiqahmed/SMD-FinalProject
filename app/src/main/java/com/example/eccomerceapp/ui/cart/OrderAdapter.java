@@ -60,7 +60,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             binding.orderId.setText(String.format(Locale.getDefault(), "#%05d", order.getId()));
             binding.orderStatus.setText(order.getStatus());
             binding.orderDate.setText(dateFormat.format(new Date(order.getCreatedAt())));
-            binding.orderTotal.setText(String.format(Locale.getDefault(), "$%.2f", order.getTotalAmount()));
+            binding.orderTotal.setText(String.format(Locale.getDefault(), "Rs %.2f", order.getTotalAmount()));
             binding.orderAddress.setText(String.format(
                     Locale.getDefault(), "%s, %s", order.getAddressLine(), order.getCity()));
         }

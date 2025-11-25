@@ -21,3 +21,9 @@
   font-size: 15px;
   font-family: inherit;
 }
+
+.user-panel .field-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}

@@ -1,0 +1,46 @@
+# Render ignore file
+# Files and directories to exclude from deployment
+
+# Node modules (will be installed during build)
+node_modules/
+**/node_modules/
+
+# Build outputs
+build/
+dist/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Android specific
+app/
+.gradle/
+local.properties
+*.apk
+*.aab
+
+# Scripts
+*.sh
+
+# Documentation (optional - remove if you want to include)
+*.md
+!README.md
+

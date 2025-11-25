@@ -7,9 +7,6 @@
             android:id="@+id/drawer_orders"
             android:title="@string/menu_orders" />
         <item
-            android:id="@+id/drawer_category"
-            android:title="@string/menu_category" />
-        <item
             android:id="@+id/drawer_likes"
             android:title="@string/menu_likes" />
         <item

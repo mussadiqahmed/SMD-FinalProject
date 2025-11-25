@@ -17,7 +17,9 @@ export default function UsersPage() {
     queryFn: fetchUsers
   });
 
-  const openPanel = (user = null) => {
+  const openPanel = (user) => {
+    // Only allow editing existing users, not creating new ones
+    if (!user) return;
     setEditingUser(user);
     setPanelOpen(true);
   };
@@ -36,9 +38,6 @@ export default function UsersPage() {
           <p className="eyebrow">Customers</p>
           <h1>Users</h1>
         </div>
-        <button type="button" className="primary" onClick={() => openPanel(null)}>
-          + Add user
-        </button>
       </header>
 
       <section className="users-table">
@@ -50,7 +49,7 @@ export default function UsersPage() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Phone</th>
+                <th>Phone / Gender</th>
                 <th />
               </tr>
             </thead>
@@ -58,10 +57,16 @@ export default function UsersPage() {
               {users.map((user) => (
                 <tr key={user.id}>
                   <td>
-                    <strong>{user.fullName}</strong>
+                    <strong>{user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim()}</strong>
+                    {user.source === 'app' && <span style={{ fontSize: '11px', color: '#9a9aae', marginLeft: '8px' }}>(App User)</span>}
                   </td>
                   <td>{user.email}</td>
-                  <td>{user.phone || '—'}</td>
+                  <td>
+                    {user.source === 'app' 
+                      ? (user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : '—')
+                      : (user.phone || '—')
+                    }
+                  </td>
                   <td>
                     <div className="row-actions">
                       <button type="button" onClick={() => openPanel(user)}>

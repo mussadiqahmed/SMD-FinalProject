@@ -48,25 +48,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="card-grid">
-            <div className="card">
-              <h3>Latest products</h3>
-              <ul>
-                {highlights.recentProducts?.length ? (
-                  highlights.recentProducts.map((item) => (
-                    <li key={item.id}>
-                      <div>
-                        <strong>{item.name}</strong>
-                        <span>${item.price?.toFixed?.(2) || item.price}</span>
-                      </div>
-                      <span className="meta">{new Date(item.createdAt).toLocaleDateString()}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li>No products yet.</li>
-                )}
-              </ul>
-            </div>
-
+         
             <div className="card">
               <h3>Latest users</h3>
               <ul>

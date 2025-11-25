@@ -62,10 +62,6 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
 
         void bind(Category category) {
             binding.categoryTitle.setText(category.getTitle());
-            Glide.with(binding.getRoot().getContext())
-                    .load(category.getImageUrl())
-                    .centerCrop()
-                    .into(binding.categoryImage);
 
             View root = binding.getRoot();
             root.setOnClickListener(v -> {

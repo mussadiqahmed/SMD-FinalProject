@@ -23,6 +23,8 @@ import com.example.eccomerceapp.data.api.ApiMapper;
 import com.example.eccomerceapp.data.api.ApiService;
 import com.example.eccomerceapp.data.local.SessionManager;
 import com.example.eccomerceapp.data.repository.CartRepository;
+import com.example.eccomerceapp.data.repository.FavoritesRepository;
+import com.example.eccomerceapp.data.repository.OrderRepository;
 import com.example.eccomerceapp.databinding.ActivityHomeBinding;
 import com.example.eccomerceapp.model.Category;
 import com.example.eccomerceapp.model.Product;
@@ -71,16 +73,34 @@ public class HomeActivity extends AppCompatActivity implements
         setupRecyclerViews();
         setupListeners();
 
+        // Clear all cart entries immediately
+        cartRepository.clearAllCartEntries();
+        // Also clean up orphaned cart entries (products deleted from admin panel)
+        cartRepository.cleanupOrphanedEntries();
+        
+        // Clean up orphaned favorites (products deleted from admin panel)
+        FavoritesRepository favoritesRepository = new FavoritesRepository(this);
+        favoritesRepository.cleanupOrphanedFavorites();
+        
+        // Clear all orders from local database immediately
+        OrderRepository orderRepository = new OrderRepository(this);
+        orderRepository.clearAllOrders();
+
         loadCategories();
-        loadProducts(null);
+        loadAllProductsForRecommended();
+        // Force update cart badge after clearing
         updateCartBadge();
     }
 
     private void setupDrawerHeader() {
         View header = binding.navigationView.getHeaderView(0);
         TextView headerName = header.findViewById(R.id.headerName);
-        headerName.setText(sessionManager.getUserName());
-        binding.textUserName.setText(sessionManager.getUserName());
+        TextView headerEmail = header.findViewById(R.id.headerEmail);
+        String userName = sessionManager.getUserName();
+        String userEmail = sessionManager.getUserEmail();
+        headerName.setText(userName);
+        headerEmail.setText(userEmail);
+        binding.textUserName.setText(userName);
         binding.navigationView.setNavigationItemSelectedListener(this);
         startProfileAnimations(header);
     }
@@ -91,7 +111,7 @@ public class HomeActivity extends AppCompatActivity implements
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.categoryRecycler.setAdapter(categoryAdapter);
 
-        productAdapter = new ProductAdapter(this);
+        productAdapter = new ProductAdapter(this, this);
         GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
         binding.productRecycler.setLayoutManager(gridLayoutManager);
         int spacing = getResources().getDimensionPixelSize(R.dimen.grid_spacing);
@@ -130,8 +150,7 @@ public class HomeActivity extends AppCompatActivity implements
             return false;
         });
 
-        binding.buttonSeeMoreCategory.setOnClickListener(v ->
-                startActivity(new Intent(this, CategoryListActivity.class)));
+        // Category "See More" button is hidden, so no listener needed
         binding.buttonSeeMoreProduct.setOnClickListener(v -> {
             Intent intent = new Intent(this, ProductListActivity.class);
             intent.putExtra(ProductListActivity.EXTRA_MODE, ProductListActivity.MODE_ALL);
@@ -160,39 +179,66 @@ public class HomeActivity extends AppCompatActivity implements
         });
     }
 
+    private void loadAllProductsForRecommended() {
+        // Load all products randomly for recommended section
+        apiService.getProducts(null, null, null, null).enqueue(
+                new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
+                    @Override
+                    public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
+                                           Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            // Shuffle products for random display
+                            List<Product> products = ApiMapper.toProductListShuffled(response.body());
+                            productAdapter.submitList(products);
+                        } else {
+                            Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
+                        Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+    
     private void loadProducts(Long categoryId) {
-        Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call;
-        if (categoryId != null) {
-            call = apiService.getProducts(categoryId, null, null, null);
-        } else {
-            call = apiService.getProducts(null, null, null, null);
+        if (categoryId == null) {
+            loadAllProductsForRecommended();
+            return;
         }
+        
+        apiService.getProducts(categoryId, null, null, null).enqueue(
+                new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
+                    @Override
+                    public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
+                                           Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            List<Product> products = ApiMapper.toProductList(response.body());
+                            productAdapter.submitList(products);
+                        } else {
+                            Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-        call.enqueue(new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
-            @Override
-            public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
-                                   Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Product> products = ApiMapper.toProductList(response.body());
-                    productAdapter.submitList(products);
-                } else {
-                    Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
-                Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
+                        Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void performSearch(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
-            loadProducts(selectedCategoryId);
+            if (selectedCategoryId != null) {
+                loadProducts(selectedCategoryId);
+            } else {
+                loadAllProductsForRecommended();
+            }
             return;
         }
-        apiService.getProducts(selectedCategoryId, null, keyword, null).enqueue(
+        // Search across all products regardless of category filter
+        apiService.getProducts(null, null, keyword, null).enqueue(
                 new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
                     @Override
                     public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
@@ -219,23 +265,7 @@ public class HomeActivity extends AppCompatActivity implements
     @Override
     public void onCategorySelected(Category category) {
         selectedCategoryId = category.getId();
-        // Find category slug from API response for filtering
-        apiService.getProducts(category.getId(), null, null, null).enqueue(
-                new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
-                    @Override
-                    public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
-                                           Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
-                        if (response.isSuccessful() && response.body() != null) {
-                            List<Product> products = ApiMapper.toProductList(response.body());
-                            productAdapter.submitList(products);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
-                        Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
-                    }
-                });
+        loadProducts(category.getId());
     }
 
     @Override
@@ -258,9 +288,6 @@ public class HomeActivity extends AppCompatActivity implements
         } else if (item.getItemId() == R.id.drawer_orders) {
             startActivity(new Intent(this, OrderHistoryActivity.class));
             return true;
-        } else if (item.getItemId() == R.id.drawer_category) {
-            startActivity(new Intent(this, CategoryListActivity.class));
-            return true;
         } else if (item.getItemId() == R.id.drawer_likes) {
             Intent intent = new Intent(this, ProductListActivity.class);
             intent.putExtra(ProductListActivity.EXTRA_MODE, ProductListActivity.MODE_FAVORITES);
@@ -277,7 +304,11 @@ public class HomeActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        loadProducts(selectedCategoryId);
+        if (selectedCategoryId != null) {
+            loadProducts(selectedCategoryId);
+        } else {
+            loadAllProductsForRecommended();
+        }
         updateCartBadge();
     }
 

@@ -49,6 +49,16 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
     }
   }, [product, resolvedCategories]);
 
+  // Reset form when panel opens for a new product
+  useEffect(() => {
+    if (open && !product) {
+      setForm(emptyProduct);
+      setImageFiles([null, null, null]);
+      setError('');
+      setFieldErrors({});
+    }
+  }, [open, product]);
+
   const activeCategory = useMemo(() => {
     return resolvedCategories.find((item) => item.id === Number(form.categoryId));
   }, [resolvedCategories, form.categoryId]);
@@ -175,6 +185,8 @@ export default function ProductPanel({ open, onClose, onSaved, categories = [], 
       }
       setImageFiles([null, null, null]);
       setFieldErrors({});
+      setForm(emptyProduct);
+      setError('');
       onSaved();
       onClose();
     } catch (err) {

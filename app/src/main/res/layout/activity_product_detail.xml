@@ -11,17 +11,20 @@
         android:layout_width="match_parent"
         android:layout_height="320dp"
         android:scaleType="centerCrop"
-        android:transitionName="productImage" />
+        android:transitionName="productImage"
+        android:clickable="true"
+        android:focusable="true" />
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/detailToolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="32dp"
+        android:paddingTop="48dp"
+        android:paddingStart="16dp"
+        android:fitsSystemWindows="true"
         android:background="@android:color/transparent"
         android:theme="@style/ThemeOverlay.Material3.ActionBar"
-        app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/white"
+        app:navigationIcon="@drawable/back_button_bg_icon"
         app:title=""
         android:elevation="0dp" />
 
@@ -70,48 +73,66 @@
                         android:textSize="14sp"
                         tools:text="Soft and warm hoodie perfect for everyday wear." />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="@string/label_sizes"
-                    android:textColor="@color/primary_dark"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/sizeChipGroup"
+                <LinearLayout
+                    android:id="@+id/sizeSection"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:chipSpacing="8dp"
-                    app:singleLine="true"
-                    app:singleSelection="true" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:text="@string/label_colors"
-                    android:textColor="@color/primary_dark"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/colorChipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    app:chipSpacing="8dp"
-                    app:singleLine="true"
-                    app:singleSelection="true" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_sizes"
+                        android:textColor="@color/primary_dark"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/sizeChipGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:chipSpacing="8dp"
+                        app:singleLine="true"
+                        app:singleSelection="true" />
+                </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/colorSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_colors"
+                        android:textColor="@color/primary_dark"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/colorChipGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:chipSpacing="8dp"
+                        app:singleLine="true"
+                        app:singleSelection="true" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/storeSection"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
                     <de.hdodenhof.circleimageview.CircleImageView
                         android:id="@+id/sellerAvatar"

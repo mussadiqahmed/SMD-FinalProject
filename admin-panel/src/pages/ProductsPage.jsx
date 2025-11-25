@@ -118,7 +118,21 @@ export default function ProductsPage() {
                 <tr key={product.id}>
                   <td>
                     <div className="product-cell">
-                      <img src={product.imageUrl || product.images?.[0]} alt={product.name} />
+                      {(() => {
+                        const imageUrl = product.imageUrl || product.images?.[0];
+                        // Convert localhost URLs to use the API base URL
+                        let finalUrl = imageUrl;
+                        if (imageUrl) {
+                          if (imageUrl.startsWith('/uploads/')) {
+                            finalUrl = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8003'}${imageUrl}`;
+                          } else if (imageUrl.includes('localhost:8001')) {
+                            finalUrl = imageUrl.replace('localhost:8001', 'localhost:8003');
+                          } else if (imageUrl.includes('localhost') && !imageUrl.includes('8003')) {
+                            finalUrl = imageUrl.replace(/localhost:\d+/, 'localhost:8003');
+                          }
+                        }
+                        return <img src={finalUrl} alt={product.name} onError={(e) => { e.target.style.display = 'none'; }} />;
+                      })()}
                       <div>
                         <strong>{product.name}</strong>
                         <p>{product.description || '—'}</p>
@@ -157,7 +171,10 @@ export default function ProductsPage() {
 
       <ProductPanel
         open={panelOpen}
-        onClose={() => setPanelOpen(false)}
+        onClose={() => {
+          setPanelOpen(false);
+          setEditingProduct(null);
+        }}
         onSaved={refetch}
         categories={categories}
         product={editingProduct}

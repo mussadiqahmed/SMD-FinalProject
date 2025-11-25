@@ -6,7 +6,7 @@
     <string name="hint_password">Password</string>
     <string name="action_login">Log In</string>
     <string name="label_forgot_password">Forgot Password?</string>
-    <string name="label_signup_prompt">Dont have an account? Please Sign Up</string>
+    <string name="label_signup_prompt">Don\'t have an account? Sign Up</string>
     <string name="menu_home">Home</string>
     <string name="menu_wallet">My Wallet</string>
     <string name="menu_orders">Orders</string>
@@ -55,8 +55,23 @@
     <string name="profile_view_orders">View Orders</string>
     <string name="profile_view_favorites">View Favorites</string>
     <string name="profile_open_wallet">Open Wallet</string>
+    <string name="profile_edit_profile">Edit Profile</string>
     <string name="profile_logout">Logout</string>
     <string name="favorites_title">My Favorites</string>
     <string name="profile_email_placeholder">hello@nova.com</string>
     <string name="products_empty">No products available right now.</string>
+    <string name="signup_title">Create Account</string>
+    <string name="signup_subtitle">Sign up to get started</string>
+    <string name="hint_first_name">First Name</string>
+    <string name="hint_last_name">Last Name</string>
+    <string name="hint_gender">Gender</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_confirm_password">Confirm Password</string>
+    <string name="action_signup">Sign Up</string>
+    <string name="label_login_prompt">Already have an account? Login</string>
+    <string-array name="gender_options">
+        <item>Male</item>
+        <item>Female</item>
+        <item>Other</item>
+    </string-array>
 </resources>
