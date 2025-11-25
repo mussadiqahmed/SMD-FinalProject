@@ -18,12 +18,18 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.eccomerceapp.R;
+import com.example.eccomerceapp.data.api.ApiClient;
+import com.example.eccomerceapp.data.api.ApiMapper;
+import com.example.eccomerceapp.data.api.ApiService;
 import com.example.eccomerceapp.data.local.SessionManager;
 import com.example.eccomerceapp.data.repository.CartRepository;
-import com.example.eccomerceapp.data.repository.ProductRepository;
 import com.example.eccomerceapp.databinding.ActivityHomeBinding;
 import com.example.eccomerceapp.model.Category;
 import com.example.eccomerceapp.model.Product;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import com.example.eccomerceapp.ui.cart.CartActivity;
 import com.example.eccomerceapp.ui.cart.OrderHistoryActivity;
 import com.example.eccomerceapp.ui.catalog.CategoryListActivity;
@@ -43,9 +49,9 @@ public class HomeActivity extends AppCompatActivity implements
         NavigationView.OnNavigationItemSelectedListener {
 
     private ActivityHomeBinding binding;
-    private ProductRepository productRepository;
     private CartRepository cartRepository;
     private SessionManager sessionManager;
+    private ApiService apiService;
 
     private CategoryAdapter categoryAdapter;
     private ProductAdapter productAdapter;
@@ -57,9 +63,9 @@ public class HomeActivity extends AppCompatActivity implements
         binding = ActivityHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        productRepository = new ProductRepository(this);
         cartRepository = new CartRepository(this);
         sessionManager = new SessionManager(this);
+        apiService = ApiClient.getInstance();
 
         setupDrawerHeader();
         setupRecyclerViews();
@@ -135,13 +141,50 @@ public class HomeActivity extends AppCompatActivity implements
     }
 
     private void loadCategories() {
-        List<Category> categories = productRepository.loadCategories();
-        categoryAdapter.submitList(categories);
+        apiService.getCategories().enqueue(new Callback<List<com.example.eccomerceapp.data.api.model.ApiCategory>>() {
+            @Override
+            public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiCategory>> call,
+                                   Response<List<com.example.eccomerceapp.data.api.model.ApiCategory>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Category> categories = ApiMapper.toCategoryList(response.body());
+                    categoryAdapter.submitList(categories);
+                } else {
+                    Toast.makeText(HomeActivity.this, "Failed to load categories", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiCategory>> call, Throwable t) {
+                Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void loadProducts(Long categoryId) {
-        List<Product> products = productRepository.loadProducts(categoryId);
-        productAdapter.submitList(products);
+        Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call;
+        if (categoryId != null) {
+            call = apiService.getProducts(categoryId, null, null, null);
+        } else {
+            call = apiService.getProducts(null, null, null, null);
+        }
+
+        call.enqueue(new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
+            @Override
+            public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
+                                   Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Product> products = ApiMapper.toProductList(response.body());
+                    productAdapter.submitList(products);
+                } else {
+                    Toast.makeText(HomeActivity.this, "Failed to load products", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
+                Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void performSearch(String keyword) {
@@ -149,8 +192,24 @@ public class HomeActivity extends AppCompatActivity implements
             loadProducts(selectedCategoryId);
             return;
         }
-        List<Product> results = productRepository.searchProducts(keyword);
-        productAdapter.submitList(results);
+        apiService.getProducts(selectedCategoryId, null, keyword, null).enqueue(
+                new Callback<List<com.example.eccomerceapp.data.api.model.ApiProduct>>() {
+                    @Override
+                    public void onResponse(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call,
+                                           Response<List<com.example.eccomerceapp.data.api.model.ApiProduct>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            List<Product> results = ApiMapper.toProductList(response.body());
+                            productAdapter.submitList(results);
+                        } else {
+                            Toast.makeText(HomeActivity.this, "Search failed", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<com.example.eccomerceapp.data.api.model.ApiProduct>> call, Throwable t) {
+                        Toast.makeText(HomeActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void navigateToCart() {

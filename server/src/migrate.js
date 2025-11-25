@@ -60,6 +60,16 @@ const migrationStatements = [
       notes TEXT,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  `CREATE TABLE IF NOT EXISTS app_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      firstName TEXT NOT NULL,
+      lastName TEXT NOT NULL,
+      fullName TEXT NOT NULL,
+      gender TEXT,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
   `CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customerName TEXT NOT NULL,
